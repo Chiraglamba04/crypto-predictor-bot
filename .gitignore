@@ -1,0 +1,22 @@
+# Virtual Environment
+.venv/
+env/
+venv/
+
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Runtime cache
+live_cache.json
+live_cache.json.tmp
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Models directory: keep structure, exclude large binaries if desired
+# models/*.joblib
