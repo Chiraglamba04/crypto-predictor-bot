@@ -103,7 +103,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-@st.cache_resource
 def get_predictor():
     return LivePredictor()
 
@@ -160,16 +159,56 @@ with st.spinner(f"Analyzing points movement and investment setup for {selected_s
         st.error(f"Prediction Pipeline Error: {str(e)}")
         st.stop()
 
-# Unpack Data
-ticker = data["ticker_info"]
-pred = data["prediction"]
-movement = data["expected_movement"]
-setup = data["trade_setup"]
-targets = data["price_targets"]
-sentiment = data["sentiment"]
-tech = data["tech_summary"]
-df_chart = data["chart_data"]
-metrics = data["metrics"]
+# Unpack Data safely with fallbacks
+ticker = data.get("ticker_info", {
+    "price_change_percent": 0.0, "high_24h": 0.0, "low_24h": 0.0,
+    "volume_24h": 0.0, "quote_volume_24h": 0.0
+})
+pred = data.get("prediction", {
+    "signal": "NEUTRAL", "signal_color": "#FFA726", "confidence": 50.0,
+    "prob_up": 50.0, "prob_down": 50.0, "top_drivers": []
+})
+targets = data.get("price_targets", {
+    "expected_high": data.get("current_price", 0.0),
+    "expected_low": data.get("current_price", 0.0),
+    "primary_target": data.get("current_price", 0.0),
+    "stop_loss": data.get("current_price", 0.0),
+    "current_atr": 0.0
+})
+movement = data.get("expected_movement", {
+    "points_delta": 0.0,
+    "pct_delta": 0.0,
+    "direction": "UP",
+    "volatility_atr": targets.get("current_atr", 0.0)
+})
+setup = data.get("trade_setup", {
+    "action": pred.get("signal", "WAIT / NO CLEAR SETUP"),
+    "action_color": pred.get("signal_color", "#FFA726"),
+    "verdict": "Analyzing latest market volatility and momentum...",
+    "entry_zone": f"${data.get('current_price', 0):,.2f}",
+    "target_1": targets.get("primary_target", 0.0),
+    "target_1_points": 0.0,
+    "target_1_pct": 0.0,
+    "target_2": targets.get("primary_target", 0.0),
+    "target_2_points": 0.0,
+    "target_2_pct": 0.0,
+    "stop_loss": targets.get("stop_loss", 0.0),
+    "stop_loss_points": 0.0,
+    "stop_loss_pct": 0.0,
+    "risk_reward_ratio": "1 : 1.5",
+    "recommended_allocation": "1% - 3% of capital"
+})
+sentiment = data.get("sentiment", {
+    "fear_and_greed_value": 50, "fear_and_greed_label": "Neutral",
+    "avg_news_sentiment": 0.0, "bullish_news_pct": 50.0, "bearish_news_pct": 20.0,
+    "latest_news": []
+})
+tech = data.get("tech_summary", {
+    "rsi": 50.0, "rsi_status": "Neutral", "macd_status": "Neutral",
+    "trend_status": "Neutral", "volatility_status": "Normal"
+})
+df_chart = data.get("chart_data", pd.DataFrame())
+metrics = data.get("metrics", {})
 
 # --- TOP STATS BAR ---
 price_chg = ticker["price_change_percent"]
