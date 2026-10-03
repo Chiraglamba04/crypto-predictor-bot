@@ -1,41 +1,56 @@
-# ⚡ CryptoPredict AI — Multi-Source Cryptocurrency Movement Predictor
+# ⚡ MarketPredict AI — Cryptocurrency & Forex Movement Predictor
 
-An agentic, multi-source cryptocurrency movement forecasting bot and interactive analytics dashboard. It aggregates real-time market data across public exchange endpoints, sentiment indices, and crypto news RSS feeds, then runs an ensemble machine learning model to generate directional predictions, confidence scores, and volatility price targets.
+An agentic, multi-source financial forecasting bot and interactive analytics dashboard supporting both **Cryptocurrency** and **Forex (Foreign Exchange) & Commodities**. It aggregates real-time market data across public exchange endpoints, macro sentiment, and breaking financial RSS feeds, then runs an ensemble machine learning model to generate directional forecasts, exact points/pips movement, and actionable trade setups.
 
 ---
 
 ## 🌟 Key Highlights
 
-1. **Multi-Source Data Aggregation**:
-   - **Exchange Price Action**: Live 1-hour and 4-hour OHLCV candlesticks and 24h ticker statistics directly from Binance Spot API (with automatic CoinGecko fallback).
-   - **Market Sentiment**: Live Crypto Fear & Greed Index from Alternative.me (0-100 scale & 30-day historical trend).
-   - **Live Crypto News NLP**: Real-time RSS feeds parsed from CoinDesk, CoinTelegraph, and Decrypt, scored by a keyword-based financial sentiment analyzer.
+1. **Multi-Asset Class Support**:
+   - **🪙 Cryptocurrency**: Bitcoin (BTC), Ethereum (ETH), Solana (SOL), BNB, XRP, Cardano (ADA), Dogecoin (DOGE), Avalanche (AVAX) via Binance Spot API (with CoinGecko fallback).
+   - **💱 Forex & Commodities**: EUR/USD, GBP/USD, USD/JPY, AUD/USD, USD/CAD, USD/CHF, NZD/USD, and Gold (XAU/USD Spot) via Yahoo Finance Chart API.
 
-2. **Feature Engineering & Technical Analysis**:
-   - Momentum & Trend: RSI (14), RSI Slope, MACD (12, 26, 9), EMA 9/21/50/200, EMA crossovers.
-   - Volatility: Bollinger Bands, %B, Bandwidth, Average True Range (ATR 14).
-   - Volume & Liquidity: On-Balance Volume (OBV), Volume SMA (20), Volume ratio.
-   - External Sentiment: Fear & Greed score normalized, rolling news sentiment polarity.
-   - Cyclical Time: 24h and 7-day sine/cosine cyclical encoding.
+2. **Pips & Points Movement Forecasting**:
+   - **Forex**: Calculates exact expected movement in **Pips** (e.g., `+45.2 Pips (+0.42%)`) based on 4-digit and 2-digit pip conventions.
+   - **Crypto**: Calculates exact point movement in dollars (e.g., `+845.20 pts (+1.25%)`).
 
-3. **Machine Learning Model Engine**:
-   - **Ensemble Architecture**: Soft-voting combination of:
-     - `HistGradientBoostingClassifier` (Captures non-linear feature interactions and regime shifts)
-     - `RandomForestClassifier` (Robust against market noise, provides Gini feature importance)
-     - `Calibrated Logistic Regression` (Provides well-calibrated directional probabilities)
-   - **Walk-Forward Validation**: Strict chronological train/test split without lookahead bias.
-   - **Multi-Horizon Forecasting**: Dedicated models for **1-Hour** and **4-Hour** forward forecasts.
+3. **Actionable Trade Setups ("Where & How to Trade")**:
+   - **Entry Zone**: Optimal buying or selling range to avoid chasing market spikes.
+   - **Target 1 (Conservative)**: Measured price level, points/pips gain, and percentage ROI.
+   - **Target 2 (Aggressive)**: Extended runner target for maximum trend capture.
+   - **Stop Loss / Invalidation**: Strict risk boundary with maximum points/pips at risk.
+   - **Risk-to-Reward Ratio (R:R)**: Clear calculation (e.g., `1 : 2.45 R:R`).
 
-4. **Interactive Streamlit Dashboard**:
-   - Real-time Top Ticker Bar with live prices, 24h highs/lows, and volume.
-   - Hero Prediction Card with directional badges (`STRONG BULLISH`, `BULLISH`, `NEUTRAL`, `BEARISH`, `STRONG BEARISH`), confidence percentage, probability splits, and ATR target prices / stop loss.
-   - Interactive 3-pane Plotly Candlestick chart with EMA overlays, Bollinger Bands, and **historical AI Buy/Sell markers**.
-   - Model Explainability (Gini importance bar charts explaining *why* the AI made the call).
-   - Crypto News Radar with live sentiment badges and direct article links.
-   - Walk-forward backtest audit with confusion matrix and simulated alpha strategy returns.
+4. **Multi-Market AI Scanner**:
+   - Scans all Forex or Crypto markets simultaneously.
+   - Identifies and ranks the **🏆 #1 Top Trade Pick Right Now** based on AI Confidence and Risk/Reward.
 
-5. **Background Auto-Updater Daemon**:
-   - Includes `src/updater.py` to continuously fetch fresh candles, re-score news, infer forecasts, and cache predictions to JSON.
+5. **Position Sizing & Lot Calculator**:
+   - **Forex**: Calculates recommended **Standard Lots**, **Mini Lots**, and pip risk based on total account capital.
+   - **Crypto**: Calculates token position size and exact dollar risk.
+
+6. **Machine Learning Model Engine**:
+   - Soft-voting ensemble combining:
+     - `HistGradientBoostingClassifier`
+     - `RandomForestClassifier` (Gini Feature Importance)
+     - `Calibrated Logistic Regression` (Calibrated probabilities)
+   - Walk-forward chronological backtesting with zero lookahead bias.
+
+---
+
+## 🚀 Quick Launch Guide
+
+### 1. One-Word Launch (from any Terminal on Mac)
+```bash
+cryptobot
+```
+Opens your browser directly to **[http://localhost:8501](http://localhost:8501)**.
+
+### 2. Manual Launch
+```bash
+cd /Users/sameersharma/.gemini/antigravity/scratch/crypto-predictor-bot
+./run.sh
+```
 
 ---
 
@@ -43,43 +58,22 @@ An agentic, multi-source cryptocurrency movement forecasting bot and interactive
 
 ```
 crypto-predictor-bot/
-├── app.py                      # Interactive Streamlit dashboard
-├── run.sh                      # One-click dashboard launcher
+├── app.py                      # Multi-market Streamlit dashboard
+├── run.sh                      # Smart launcher script
 ├── requirements.txt            # Python dependencies
 ├── live_cache.json             # Cached predictions and market states
 ├── src/
 │   ├── __init__.py
-│   ├── data_fetcher.py         # Multi-source API & RSS data fetcher
+│   ├── data_fetcher.py         # Multi-source API & RSS data fetcher (Binance + Yahoo FX)
 │   ├── technical_indicators.py # Vectorized pandas/numpy technical analysis
 │   ├── feature_engineering.py  # Feature matrix synthesis & horizon labels
 │   ├── model_engine.py         # ML ensemble model & walk-forward validation
-│   ├── live_predictor.py       # Full pipeline orchestrator
+│   ├── live_predictor.py       # Full pipeline orchestrator with Pips math
 │   └── updater.py              # Background daemon for continuous updates
 └── models/                     # Saved trained models (.joblib)
 ```
 
 ---
 
-## 🚀 Quick Start Guide
-
-### 1. Launch the Interactive Dashboard
-From the project folder:
-```bash
-./run.sh
-```
-Or directly using Python:
-```bash
-.venv/bin/streamlit run app.py
-```
-Open [http://localhost:8501](http://localhost:8501) in your browser.
-
-### 2. Run the Background Auto-Updater (Optional)
-To keep predictions continuously fresh in the background:
-```bash
-.venv/bin/python3 src/updater.py
-```
-
----
-
 ## 🛡️ Risk Disclaimer
-Cryptocurrency trading involves substantial financial risk and high market volatility. Predictions generated by this system are for informational and educational research purposes only and do not constitute financial advice.
+Foreign exchange and cryptocurrency trading involves significant financial risk and market volatility. Predictions and trade setups generated by this software are for educational and quantitative research purposes only and do not constitute personal financial advice.
