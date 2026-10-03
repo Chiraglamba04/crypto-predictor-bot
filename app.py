@@ -1,7 +1,7 @@
 """
-CryptoPredict AI - Live Cryptocurrency Movement Prediction Dashboard
-A high-accuracy, multi-source predictive analytics dashboard combining exchange price action,
-sentiment indices (Fear & Greed), crypto news NLP, and an ensemble machine learning model.
+CryptoPredict AI - Live Cryptocurrency Movement Prediction & Investment Advisory Dashboard
+Enhanced with Exact Points Up/Down Movement Forecasts, Actionable Entry/Target/Stop Trade Setups,
+and a Multi-Coin AI Market Scanner for identifying the best crypto investments in real-time.
 """
 
 import time
@@ -17,7 +17,7 @@ from src.live_predictor import LivePredictor
 
 # Page Setup
 st.set_page_config(
-    page_title="CryptoPredict AI | Live Movement Predictor",
+    page_title="CryptoPredict AI | Investment Advisor & Points Movement Forecast",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -46,17 +46,33 @@ st.markdown("""
         padding: 24px 28px;
         border-radius: 16px;
         border: 1px solid #2e3c54;
-        margin-bottom: 25px;
+        margin-bottom: 20px;
         box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
     }
     
-    /* Signal Badges */
+    /* Trade Setup Action Card */
+    .setup-card {
+        background: #111823;
+        border-radius: 14px;
+        border: 1px solid #24334a;
+        padding: 20px 24px;
+        margin-bottom: 25px;
+    }
+
     .signal-badge {
-        font-size: 26px;
+        font-size: 24px;
         font-weight: 800;
         letter-spacing: 1px;
         padding: 6px 18px;
         border-radius: 8px;
+        display: inline-block;
+    }
+
+    .action-badge {
+        font-size: 18px;
+        font-weight: 700;
+        padding: 6px 14px;
+        border-radius: 6px;
         display: inline-block;
     }
     
@@ -76,16 +92,12 @@ st.markdown("""
         transition: 0.2s ease-in-out;
     }
 
-    .driver-tag {
-        background: #1b263b;
-        color: #90caf9;
-        padding: 4px 10px;
-        border-radius: 6px;
-        font-size: 13px;
-        margin-right: 6px;
-        margin-bottom: 6px;
-        display: inline-block;
-        border: 1px solid #2a3d5e;
+    .opportunity-card {
+        background: #131b28;
+        border-radius: 10px;
+        padding: 16px 20px;
+        margin-bottom: 12px;
+        border: 1px solid #223249;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -100,15 +112,15 @@ predictor = get_predictor()
 
 # --- SIDEBAR CONTROLS ---
 with st.sidebar:
-    st.image("https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=025", width=48)
+    st.image("https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=025", width=44)
     st.title("⚡ CryptoPredict AI")
-    st.caption("Multi-Source Intelligence & ML Forecasting")
+    st.caption("Movement Points Forecast & Investment Advisor")
     st.divider()
 
-    st.subheader("⚙️ Prediction Settings")
+    st.subheader("⚙️ Select Market")
     symbol_keys = list(CRYPTO_PAIRS.keys())
     selected_symbol = st.selectbox(
-        "Select Cryptocurrency",
+        "Cryptocurrency",
         options=symbol_keys,
         format_func=lambda s: f"{CRYPTO_PAIRS[s]['name']} ({s.replace('USDT', '')})"
     )
@@ -129,15 +141,15 @@ with st.sidebar:
         st.rerun()
 
     st.divider()
-    st.subheader("🌐 Data Pipeline Status")
-    st.success("🟢 Binance Spot API: Connected")
-    st.success("🟢 Fear & Greed Index: Live")
-    st.success("🟢 News Sentiment Feeds: Active")
-    st.info("🧠 Ensemble: HistGradientBoosting + Random Forest + Calibrated Logistic Regression")
+    st.subheader("🌐 System Status")
+    st.success("🟢 Binance API: Connected")
+    st.success("🟢 Fear & Greed: Real-Time")
+    st.success("🟢 News NLP: Active")
+    st.info("🧠 Ensemble: HistGradientBoosting + Random Forest + Logistic Regression")
 
 
 # --- FETCH DATA & INFERENCE ---
-with st.spinner(f"Analyzing multi-source indicators & training ensemble for {selected_symbol}..."):
+with st.spinner(f"Analyzing points movement and investment setup for {selected_symbol}..."):
     try:
         data = predictor.analyze_and_predict(
             symbol=selected_symbol,
@@ -151,6 +163,8 @@ with st.spinner(f"Analyzing multi-source indicators & training ensemble for {sel
 # Unpack Data
 ticker = data["ticker_info"]
 pred = data["prediction"]
+movement = data["expected_movement"]
+setup = data["trade_setup"]
 targets = data["price_targets"]
 sentiment = data["sentiment"]
 tech = data["tech_summary"]
@@ -202,55 +216,153 @@ with col5:
 
 st.write("")
 
-# --- HERO PREDICTION BANNER ---
+# --- HERO PREDICTION & POINTS MOVEMENT BANNER ---
 sig = pred["signal"]
 sig_color = pred["signal_color"]
 conf = pred["confidence"]
+delta_pts = movement["points_delta"]
+delta_pct = movement["pct_delta"]
+pts_sign = "+" if delta_pts >= 0 else ""
+pts_color = "#00E676" if delta_pts >= 0 else "#FF1744"
+move_dir = "UPWARD MOVEMENT" if delta_pts >= 0 else "DOWNWARD MOVEMENT"
 
 st.markdown(f"""
 <div class="prediction-card">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
         <div>
-            <div style="color: #90caf9; font-size: 14px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;">
-                AI Predictive Direction ({data['horizon'].upper()} Forecast)
+            <div style="color: #90caf9; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;">
+                FORECAST DIRECTION & PROBABILITY ({data['horizon'].upper()} TIMEFRAME)
             </div>
             <div class="signal-badge" style="background-color: {sig_color}22; color: {sig_color}; border: 2px solid {sig_color};">
                 {sig}
             </div>
-            <div style="margin-top: 12px; color: #cfd8dc; font-size: 15px;">
-                Model Confidence: <strong style="color: white; font-size: 18px;">{conf:.1f}%</strong> | 
-                Probability: <span style="color: #00E676;">{pred['prob_up']}% Bullish</span> vs <span style="color: #FF1744;">{pred['prob_down']}% Bearish</span>
+            <div style="margin-top: 10px; color: #cfd8dc; font-size: 14px;">
+                Model Confidence: <strong style="color: white; font-size: 16px;">{conf:.1f}%</strong> | 
+                Probability Split: <span style="color: #00E676;">{pred['prob_up']}% Up</span> vs <span style="color: #FF1744;">{pred['prob_down']}% Down</span>
             </div>
         </div>
-        <div style="text-align: right; background: #131c2b; padding: 14px 20px; border-radius: 10px; border: 1px solid #23324a;">
-            <div style="color: #90caf9; font-size: 13px; margin-bottom: 4px;">TARGET PRICE OBJECTIVE</div>
-            <div style="font-size: 24px; font-weight: 700; color: #ffffff;">${targets['primary_target']:,.2f}</div>
-            <div style="font-size: 13px; color: #b0bec5; margin-top: 4px;">
-                Invalidation / Stop: <span style="color: #ef5350;">${targets['stop_loss']:,.2f}</span> | ATR Range: ±${targets['current_atr']:,.2f}
+        <div style="background: #141f30; padding: 16px 24px; border-radius: 12px; border: 1px solid #2b3d5c; text-align: right;">
+            <div style="color: #90caf9; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;">
+                EXPECTED POINT MOVEMENT ({data['horizon'].upper()})
+            </div>
+            <div style="font-size: 30px; font-weight: 800; color: {pts_color};">
+                {pts_sign}{delta_pts:,.2f} pts
+            </div>
+            <div style="font-size: 14px; font-weight: 600; color: {pts_color};">
+                {move_dir} ({pts_sign}{delta_pct:.2f}%)
             </div>
         </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# Confidence Progress Bar
-st.progress(pred["prob_up"] / 100.0, text=f"Model Probability Split: {pred['prob_up']}% Bullish (Green) vs {pred['prob_down']}% Bearish (Red)")
-
-st.write("")
+# --- ACTIONABLE INVESTMENT SETUP CARD ---
+st.markdown(f"""
+<div class="setup-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #24354d; padding-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 18px; font-weight: 700; color: white;">🎯 Where & How to Invest:</span>
+            <span class="action-badge" style="background: {setup['action_color']}25; color: {setup['action_color']}; border: 1.5px solid {setup['action_color']};">
+                {setup['action']}
+            </span>
+        </div>
+        <div style="font-size: 14px; color: #90caf9;">
+            Risk-to-Reward Ratio: <strong style="color: white; font-size: 16px;">{setup['risk_reward_ratio']}</strong> | 
+            Allocation: <span style="color: #ffb74d;">{setup['recommended_allocation']}</span>
+        </div>
+    </div>
+    <div style="font-size: 15px; color: #cfd8dc; margin-bottom: 18px; font-style: italic;">
+        💡 <strong>Action Verdict:</strong> {setup['verdict']}
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+        <div style="background: #172130; padding: 12px 16px; border-radius: 8px; border-left: 4px solid #29b6f6;">
+            <div style="font-size: 12px; color: #90caf9;">RECOMMENDED ENTRY ZONE</div>
+            <div style="font-size: 18px; font-weight: 700; color: white; margin-top: 4px;">{setup['entry_zone']}</div>
+            <div style="font-size: 12px; color: #b0bec5; margin-top: 2px;">Optimal buying/entry window</div>
+        </div>
+        <div style="background: #172130; padding: 12px 16px; border-radius: 8px; border-left: 4px solid #00E676;">
+            <div style="font-size: 12px; color: #00E676;">TARGET 1 (CONSERVATIVE)</div>
+            <div style="font-size: 18px; font-weight: 700; color: white; margin-top: 4px;">${setup['target_1']:,.2f}</div>
+            <div style="font-size: 12px; color: #00E676; margin-top: 2px;">+{setup['target_1_points']:,.2f} pts (+{setup['target_1_pct']:.2f}%)</div>
+        </div>
+        <div style="background: #172130; padding: 12px 16px; border-radius: 8px; border-left: 4px solid #76ff03;">
+            <div style="font-size: 12px; color: #76ff03;">TARGET 2 (AGGRESSIVE)</div>
+            <div style="font-size: 18px; font-weight: 700; color: white; margin-top: 4px;">${setup['target_2']:,.2f}</div>
+            <div style="font-size: 12px; color: #76ff03; margin-top: 2px;">+{setup['target_2_points']:,.2f} pts (+{setup['target_2_pct']:.2f}%)</div>
+        </div>
+        <div style="background: #172130; padding: 12px 16px; border-radius: 8px; border-left: 4px solid #FF1744;">
+            <div style="font-size: 12px; color: #FF1744;">STOP LOSS / INVALIDATION</div>
+            <div style="font-size: 18px; font-weight: 700; color: white; margin-top: 4px;">${setup['stop_loss']:,.2f}</div>
+            <div style="font-size: 12px; color: #FF1744; margin-top: 2px;">-{setup['stop_loss_points']:,.2f} pts (-{setup['stop_loss_pct']:.2f}%)</div>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # --- TABS SECTION ---
-tab_chart, tab_intelligence, tab_sentiment, tab_backtest = st.tabs([
+tab_scanner, tab_chart, tab_calculator, tab_intelligence, tab_sentiment, tab_backtest = st.tabs([
+    "💎 AI Market Scanner (Where to Invest Now)",
     "📈 Interactive Chart & Signals",
+    "🧮 Position Size & Risk Calculator",
     "🧠 Model Intelligence & Drivers",
     "📰 Sentiment & Live News",
     "📊 Backtest & Performance Audit"
 ])
 
-# === TAB 1: INTERACTIVE CHART ===
+# === TAB 1: AI MARKET SCANNER (WHERE TO INVEST RIGHT NOW) ===
+with tab_scanner:
+    st.subheader("💎 Multi-Coin AI Scanner: Where Should You Invest Right Now?")
+    st.write("The bot scans all supported cryptocurrencies and ranks them by **Highest AI Confidence**, **Upward Movement Potential**, and **Risk-to-Reward Ratio**.")
+
+    with st.spinner("Scanning all cryptocurrency markets for top investment opportunities..."):
+        opportunities = predictor.scan_all_coins(horizon=horizon_option)
+
+    if opportunities:
+        top_pick = opportunities[0]
+        
+        # Highlight #1 Pick
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #1b283d 0%, #101826 100%); border-radius: 12px; padding: 18px 24px; border: 2px solid #00E5FF; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <span style="background: #00E5FF22; color: #00E5FF; border: 1px solid #00E5FF; padding: 4px 10px; border-radius: 4px; font-weight: 700; font-size: 12px;">🏆 #1 TOP AI INVESTMENT PICK RIGHT NOW</span>
+                    <h2 style="color: white; margin: 8px 0 4px 0;">{top_pick['name']} ({top_pick['symbol'].replace('USDT','')}) - ${top_pick['price']:,.2f}</h2>
+                    <div style="font-size: 14px; color: #b0bec5;">
+                        AI Signal: <strong style="color: #00E676;">{top_pick['signal']}</strong> ({top_pick['confidence']:.1f}% Confidence) | Action: <strong style="color: #00E676;">{top_pick['action']}</strong>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 13px; color: #90caf9;">EXPECTED MOVEMENT</div>
+                    <div style="font-size: 24px; font-weight: 800; color: #00E676;">{top_pick['points_delta']:+.2f} pts ({top_pick['pct_delta']:+.2f}%)</div>
+                    <div style="font-size: 13px; color: #cfd8dc;">Target 1: <strong>${top_pick['target_1']:,.2f}</strong> (+{top_pick['target_1_pct']:.2f}%)</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Comparison Table of all coins
+        st.markdown("### 📋 Full Market Scan Rankings")
+        scan_df = pd.DataFrame([
+            {
+                "Coin": f"{o['name']} ({o['symbol'].replace('USDT','')})",
+                "Current Price": f"${o['price']:,.2f}",
+                "AI Signal": o["signal"],
+                "Confidence": f"{o['confidence']:.1f}%",
+                "Forecast Movement": f"{o['points_delta']:+.2f} pts ({o['pct_delta']:+.2f}%)",
+                "Action Verdict": o["action"],
+                "Target 1": f"${o['target_1']:,.2f}",
+                "Stop Loss": f"${o['stop_loss']:,.2f}",
+                "Risk/Reward": o["risk_reward"]
+            }
+            for o in opportunities
+        ])
+        st.dataframe(scan_df, use_container_width=True)
+
+
+# === TAB 2: INTERACTIVE CHART ===
 with tab_chart:
     st.subheader(f"{data['symbol_name']} Price Action & AI Signal Markers")
     
-    # Plotly Candlestick Chart with Subplots
     fig = make_subplots(
         rows=3, cols=1,
         shared_xaxes=True,
@@ -366,13 +478,54 @@ with tab_chart:
     with c4:
         st.info(f"**Volatility:** {tech['volatility_status']}")
 
-# === TAB 2: MODEL INTELLIGENCE ===
+
+# === TAB 3: POSITION SIZE & RISK CALCULATOR ===
+with tab_calculator:
+    st.subheader("🧮 Position Sizing & Capital Risk Calculator")
+    st.write("Calculate exactly how much money to invest and what your exact profit or loss will be for this setup:")
+
+    calc_c1, calc_c2 = st.columns(2)
+    with calc_c1:
+        total_portfolio = st.number_input("Total Trading Portfolio ($ USD)", min_value=100.0, value=5000.0, step=500.0)
+        risk_pct = st.slider("Maximum Risk Per Trade (% of account)", min_value=0.5, max_value=5.0, value=2.0, step=0.5)
+        
+    with calc_c2:
+        max_dollar_risk = total_portfolio * (risk_pct / 100.0)
+        curr_p = data["current_price"]
+        sl_dist = abs(curr_p - setup["stop_loss"])
+        
+        # Position size in tokens = max dollar risk / stop loss distance in dollars
+        if sl_dist > 0:
+            token_position_size = max_dollar_risk / sl_dist
+            dollar_position_size = token_position_size * curr_p
+        else:
+            token_position_size = 0.0
+            dollar_position_size = 0.0
+
+        potential_profit_t1 = token_position_size * abs(setup["target_1"] - curr_p)
+        potential_profit_t2 = token_position_size * abs(setup["target_2"] - curr_p)
+
+        st.markdown(f"""
+        <div style="background: #141f2e; padding: 18px 20px; border-radius: 10px; border: 1px solid #283e5c;">
+            <div style="color: #90caf9; font-size: 13px;">CALCULATED TRADE EXECUTION SIZING</div>
+            <div style="font-size: 22px; font-weight: 700; color: white; margin-top: 4px;">
+                Invest: ${dollar_position_size:,.2f} ({token_position_size:.4f} {selected_symbol.replace('USDT','')})
+            </div>
+            <div style="font-size: 14px; color: #cfd8dc; margin-top: 8px;">
+                • Max Risk (if stopped out): <span style="color: #FF1744; font-weight: 700;">-${max_dollar_risk:,.2f}</span> ({risk_pct}%)<br/>
+                • Target 1 Profit: <span style="color: #00E676; font-weight: 700;">+${potential_profit_t1:,.2f}</span><br/>
+                • Target 2 Profit: <span style="color: #76ff03; font-weight: 700;">+${potential_profit_t2:,.2f}</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+
+# === TAB 4: MODEL INTELLIGENCE ===
 with tab_intelligence:
     st.subheader("🧠 Model Explainability & Market Drivers")
-    st.write("Why did the AI produce this prediction? Here are the top quantitative factors influencing the ensemble:")
+    st.write("Why did the AI produce this prediction? Top factors influencing the ensemble:")
 
     col_feat, col_weights = st.columns([0.6, 0.4])
-    
     with col_feat:
         top_drivers = pred["top_drivers"]
         if top_drivers:
@@ -394,8 +547,6 @@ with tab_intelligence:
                 height=300
             )
             st.plotly_chart(fig_imp, use_container_width=True)
-        else:
-            st.write("Feature importances loading...")
 
     with col_weights:
         st.markdown("### Key Factor Explanations")
@@ -409,12 +560,12 @@ with tab_intelligence:
             </div>
             """, unsafe_allow_html=True)
 
-# === TAB 3: SENTIMENT & LIVE NEWS ===
+
+# === TAB 5: SENTIMENT & LIVE NEWS ===
 with tab_sentiment:
     st.subheader("📰 Market Sentiment & Live News Intelligence")
     
     col_fg, col_news_ratio = st.columns([0.5, 0.5])
-    
     with col_fg:
         st.markdown("### Crypto Fear & Greed Index (30-Day Trend)")
         fng_history = sentiment.get("fear_and_greed_history", [])
@@ -480,7 +631,8 @@ with tab_sentiment:
         </div>
         """, unsafe_allow_html=True)
 
-# === TAB 4: BACKTEST AUDIT ===
+
+# === TAB 6: BACKTEST AUDIT ===
 with tab_backtest:
     st.subheader("📊 Walk-Forward Backtest & Model Performance Audit")
     st.caption("Evaluated strictly on out-of-sample forward test data with zero lookahead bias.")
@@ -497,7 +649,6 @@ with tab_backtest:
 
     st.write("")
     col_cm, col_strat = st.columns([0.45, 0.55])
-    
     with col_cm:
         st.markdown("### Confusion Matrix")
         cm = metrics.get("confusion_matrix", [[0, 0], [0, 0]])
@@ -523,4 +674,4 @@ with tab_backtest:
 
 # --- FOOTER ---
 st.divider()
-st.caption(f"⚡ CryptoPredict AI Engine • Last Updated: {data['last_updated']} • Disclaimer: Cryptocurrency trading entails substantial market risk. Predictions are for informational and research purposes only.")
+st.caption(f"⚡ CryptoPredict AI Engine • Last Updated: {data['last_updated']} • Disclaimer: Cryptocurrency trading entails substantial market risk. Predictions and trade setups are for quantitative research purposes only and not financial advice.")

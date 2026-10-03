@@ -1,14 +1,14 @@
 """
 Live Predictor Pipeline
 High-level orchestrator that connects data fetching, feature engineering, model inference,
-and visual indicator preparation for real-time cryptocurrency forecasts.
+actionable trade setups (entry, targets, stop-loss, expected points), and multi-coin market scanning.
 """
 
 import os
 import time
 import pandas as pd
 import numpy as np
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional
 
 from src.data_fetcher import DataFetcher, CRYPTO_PAIRS
 from src.feature_engineering import FeatureEngineer, FEATURE_COLUMNS
@@ -32,14 +32,11 @@ class LivePredictor:
         1. Multi-source data ingestion (Candles, F&G, News RSS)
         2. Technical indicator math & Feature synthesis
         3. Walk-forward ensemble model training or inference
-        4. Target price range estimation based on volatility
-        5. Historical signals generation for chart overlay
+        4. Expected Points Movement (up/down delta in $ points and %)
+        5. Actionable Investment Setup (Where to enter, Target 1, Target 2, Stop Loss, Risk-to-Reward)
+        6. Historical signals generation for chart overlay
         """
-        cache_key = f"{symbol}_{horizon}"
-        now = time.time()
-        
         # 1. Fetch market data
-        interval = "1h" if horizon == "1h" else "4h"
         raw_df = self.fetcher.fetch_binance_klines(symbol=symbol, interval="1h", limit=500)
         ticker_info = self.fetcher.fetch_24h_ticker(symbol=symbol)
         sentiment_summary = self.fetcher.get_market_sentiment_summary()
@@ -71,25 +68,103 @@ class LivePredictor:
         # 6. Live Prediction
         prediction = engine.predict_live(latest_features)
 
-        # 7. Price Target Estimation (based on ATR)
+        # 7. Exact Points Movement Calculation (based on ATR & Model Probability)
         current_price = float(df_featured["close"].iloc[-1])
         current_atr = float(df_featured["atr_14"].iloc[-1])
         multiplier = 1.0 if horizon == "1h" else 2.2
         
-        expected_high = current_price + (current_atr * multiplier)
-        expected_low = current_price - (current_atr * multiplier)
+        prob_up = prediction["prob_up"] / 100.0
+        prob_down = prediction["prob_down"] / 100.0
 
-        if "BULLISH" in prediction["signal"]:
-            primary_target = current_price + (current_atr * multiplier * 0.8)
-            stop_loss = current_price - (current_atr * 1.2)
-        elif "BEARISH" in prediction["signal"]:
-            primary_target = current_price - (current_atr * multiplier * 0.8)
-            stop_loss = current_price + (current_atr * 1.2)
+        # Expected point delta estimation (directional probability * volatility step)
+        directional_bias = prob_up - 0.50  # -0.50 to +0.50
+        expected_points_delta = float(directional_bias * 2.0 * current_atr * multiplier)
+        expected_pct_delta = float((expected_points_delta / current_price) * 100.0)
+
+        # 8. Actionable Investment Setup (Where to enter, Targets, Invalidation)
+        is_bullish = "BULLISH" in prediction["signal"]
+        is_bearish = "BEARISH" in prediction["signal"]
+
+        if is_bullish:
+            action = "STRONG BUY / LONG" if "STRONG" in prediction["signal"] else "BUY / ACCUMULATE"
+            action_color = "#00E676"
+            # Optimal entry: buy on slight dip or market
+            entry_low = current_price * 0.9985
+            entry_high = current_price * 1.0005
+            
+            target_1 = current_price + (current_atr * multiplier * 0.9)
+            target_2 = current_price + (current_atr * multiplier * 1.8)
+            stop_loss = current_price - (current_atr * multiplier * 0.75)
+            
+            risk_points = abs(current_price - stop_loss)
+            reward_points = abs(target_1 - current_price)
+            rr_ratio = reward_points / (risk_points + 1e-6)
+            
+            t1_points = target_1 - current_price
+            t1_pct = (t1_points / current_price) * 100.0
+            t2_points = target_2 - current_price
+            t2_pct = (t2_points / current_price) * 100.0
+            sl_points = current_price - stop_loss
+            sl_pct = (sl_points / current_price) * 100.0
+            investment_verdict = f"High probability upside move expected ({expected_points_delta:+.2f} pts). Enter near ${entry_low:,.2f} - ${entry_high:,.2f}."
+            
+        elif is_bearish:
+            action = "STRONG SELL / SHORT" if "STRONG" in prediction["signal"] else "SELL / TAKE PROFIT"
+            action_color = "#FF1744"
+            entry_low = current_price * 0.9995
+            entry_high = current_price * 1.0015
+            
+            target_1 = current_price - (current_atr * multiplier * 0.9)
+            target_2 = current_price - (current_atr * multiplier * 1.8)
+            stop_loss = current_price + (current_atr * multiplier * 0.75)
+            
+            risk_points = abs(stop_loss - current_price)
+            reward_points = abs(current_price - target_1)
+            rr_ratio = reward_points / (risk_points + 1e-6)
+            
+            t1_points = target_1 - current_price
+            t1_pct = (t1_points / current_price) * 100.0
+            t2_points = target_2 - current_price
+            t2_pct = (t2_points / current_price) * 100.0
+            sl_points = stop_loss - current_price
+            sl_pct = (sl_points / current_price) * 100.0
+            investment_verdict = f"High probability downward pressure ({expected_points_delta:+.2f} pts). Protect capital or take profit."
         else:
-            primary_target = current_price
-            stop_loss = current_price - (current_atr * 1.0)
+            action = "WAIT / NO CLEAR SETUP"
+            action_color = "#FFA726"
+            entry_low = current_price * 0.997
+            entry_high = current_price * 1.003
+            target_1 = current_price + (current_atr * 0.5)
+            target_2 = current_price + (current_atr * 1.0)
+            stop_loss = current_price - (current_atr * 0.5)
+            rr_ratio = 1.0
+            t1_points = target_1 - current_price
+            t1_pct = (t1_points / current_price) * 100.0
+            t2_points = target_2 - current_price
+            t2_pct = (t2_points / current_price) * 100.0
+            sl_points = current_price - stop_loss
+            sl_pct = (sl_points / current_price) * 100.0
+            investment_verdict = "Market in consolidation range. Wait for breakout or high-confidence reversal before allocating."
 
-        # 8. Historical signals on the last 50 candles for charting
+        trade_setup = {
+            "action": action,
+            "action_color": action_color,
+            "verdict": investment_verdict,
+            "entry_zone": f"${entry_low:,.2f} - ${entry_high:,.2f}",
+            "target_1": round(target_1, 2),
+            "target_1_points": round(t1_points, 2),
+            "target_1_pct": round(t1_pct, 2),
+            "target_2": round(target_2, 2),
+            "target_2_points": round(t2_points, 2),
+            "target_2_pct": round(t2_pct, 2),
+            "stop_loss": round(stop_loss, 2),
+            "stop_loss_points": round(sl_points, 2),
+            "stop_loss_pct": round(sl_pct, 2),
+            "risk_reward_ratio": f"1 : {rr_ratio:.2f}",
+            "recommended_allocation": "1% - 3% of capital" if prediction["confidence"] > 60 else "0.5% - 1% max"
+        }
+
+        # 9. Historical signals on the last 50 candles for charting
         signals_history = []
         recent_featured = df_featured.tail(60).copy()
         
@@ -111,7 +186,7 @@ class LivePredictor:
                 "signal": sig
             })
 
-        # 9. Technical Summary Dashboard
+        # 10. Technical Summary Dashboard
         rsi_val = float(df_featured["rsi_14"].iloc[-1])
         macd_val = float(df_featured["macd"].iloc[-1])
         macd_sig_val = float(df_featured["macd_signal"].iloc[-1])
@@ -120,7 +195,7 @@ class LivePredictor:
 
         tech_summary = {
             "rsi": round(rsi_val, 1),
-            "rsi_status": "Oversold (Bullish Reversal)" if rsi_val < 30 else ("Overbought (Bearish Pullback)" if rsi_val > 70 else "Neutral Momentum"),
+            "rsi_status": "Oversold (Bullish Reversal Zone)" if rsi_val < 32 else ("Overbought (Bearish Pullback Zone)" if rsi_val > 68 else "Neutral Momentum"),
             "macd_status": "Bullish Crossover" if macd_val > macd_sig_val else "Bearish Momentum",
             "trend_status": "Short-Term Uptrend (EMA 9 > EMA 21)" if ema_9_val > ema_21_val else "Short-Term Downtrend (EMA 9 < EMA 21)",
             "volatility_status": "High Volatility" if float(df_featured["bb_bandwidth"].iloc[-1]) > 5.0 else "Consolidating / Low Volatility",
@@ -133,12 +208,19 @@ class LivePredictor:
             "current_price": current_price,
             "ticker_info": ticker_info,
             "prediction": prediction,
+            "expected_movement": {
+                "points_delta": round(expected_points_delta, 2),
+                "pct_delta": round(expected_pct_delta, 2),
+                "direction": "UP" if expected_points_delta >= 0 else "DOWN",
+                "volatility_atr": round(current_atr, 2),
+            },
+            "trade_setup": trade_setup,
             "sentiment": sentiment_summary,
             "tech_summary": tech_summary,
             "price_targets": {
-                "expected_high": round(expected_high, 2),
-                "expected_low": round(expected_low, 2),
-                "primary_target": round(primary_target, 2),
+                "expected_high": round(current_price + (current_atr * multiplier), 2),
+                "expected_low": round(current_price - (current_atr * multiplier), 2),
+                "primary_target": round(target_1, 2),
                 "stop_loss": round(stop_loss, 2),
                 "current_atr": round(current_atr, 2),
             },
@@ -149,3 +231,36 @@ class LivePredictor:
         }
 
         return result
+
+    def scan_all_coins(self, horizon: str = "1h") -> List[Dict[str, Any]]:
+        """
+        Scans all 8 supported cryptocurrencies to find the top investment opportunities right now.
+        Ranks by model confidence, directional bias, and Risk/Reward ratio.
+        """
+        opportunities = []
+        for sym, meta in CRYPTO_PAIRS.items():
+            try:
+                res = self.analyze_and_predict(symbol=sym, horizon=horizon, force_retrain=False)
+                opportunities.append({
+                    "symbol": sym,
+                    "name": meta["name"],
+                    "price": res["current_price"],
+                    "signal": res["prediction"]["signal"],
+                    "confidence": res["prediction"]["confidence"],
+                    "prob_up": res["prediction"]["prob_up"],
+                    "points_delta": res["expected_movement"]["points_delta"],
+                    "pct_delta": res["expected_movement"]["pct_delta"],
+                    "action": res["trade_setup"]["action"],
+                    "entry_zone": res["trade_setup"]["entry_zone"],
+                    "target_1": res["trade_setup"]["target_1"],
+                    "target_1_pct": res["trade_setup"]["target_1_pct"],
+                    "stop_loss": res["trade_setup"]["stop_loss"],
+                    "risk_reward": res["trade_setup"]["risk_reward_ratio"],
+                    "score": res["prediction"]["confidence"] * (1.2 if "BULLISH" in res["prediction"]["signal"] else 0.8)
+                })
+            except Exception:
+                continue
+
+        # Sort highest score first
+        opportunities.sort(key=lambda x: x["score"], reverse=True)
+        return opportunities
